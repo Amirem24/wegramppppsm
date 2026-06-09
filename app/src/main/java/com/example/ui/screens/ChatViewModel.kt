@@ -71,6 +71,35 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
             repository.sendFile(nodeId, uri, name, size, mimeType)
         }
     }
+
+    // Advanced FTP actions
+    fun acceptFileOffer(messageId: String, endpointId: String) {
+        repository.nearbyManager.acceptFileOffer(messageId, endpointId)
+    }
+
+    fun rejectFileOffer(messageId: String, endpointId: String) {
+        repository.nearbyManager.rejectFileOffer(messageId, endpointId)
+    }
+
+    fun pauseFileTransfer(messageId: String, endpointId: String) {
+        repository.nearbyManager.pauseFileTransfer(messageId, endpointId)
+    }
+
+    fun resumeFileTransfer(messageId: String, endpointId: String) {
+        repository.nearbyManager.resumeFileTransfer(messageId, endpointId)
+    }
+
+    // Profile updates
+    fun getMyProfile(): Pair<String, String> {
+        return Pair(repository.nearbyManager.myUsername, repository.nearbyManager.myAvatar)
+    }
+
+    fun updateMyProfile(username: String, avatar: String) {
+        repository.nearbyManager.myUsername = username
+        repository.nearbyManager.myAvatar = avatar
+        stopNearby()
+        startNearby()
+    }
     
     // Combine discovered with saved nodes
     val aggregatedNodes = combine(savedNodes, discoveredNodes, connectedEndpoints) { saved, discovered, connected ->

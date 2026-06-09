@@ -13,7 +13,15 @@ data class Node(
     val isConnected: Boolean,
     val signalStrength: Int = 3, // 1-weak, 2-good, 3-strong dummy if not provided
     val transportType: String = "BLE", // Bluetooth, Wi-Fi, Hotspot
-    val ipAddress: String = "192.168.1.?" // Simulated IP
+    val ipAddress: String = "192.168.1.?", // Simulated IP
+    val userId: String = id,
+    val username: String = name,
+    val avatarRef: String = "avatar_1",
+    val supportedTransports: String = "Bluetooth/Wi-Fi/Hotspot",
+    val protocolVersion: String = "gochat-v1.0",
+    val connectionState: String = "Online", // "Online", "Offline", "Connecting", "Connected"
+    val pairStatus: String = "Unpaired", // "Paired" or "Unpaired"
+    val isContact: Boolean = false // Track if added to contacts from Nearby Nodes List
 )
 
 enum class MessageStatus {
@@ -46,5 +54,11 @@ data class Message(
     val speedKbps: Long = 0L,
     val estimatedTimeLeft: Long = 0L,
     val payloadId: Long? = null,
-    val fileHash: String? = null
+    val fileHash: String? = null,
+    
+    // Chunk FTP fields
+    val currentChunkIndex: Int = 0,
+    val totalChunks: Int = 0,
+    val isPaused: Boolean = false,
+    val hasAccepted: Boolean = true // False if receiving user must click accept first
 )

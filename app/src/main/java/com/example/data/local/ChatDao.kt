@@ -14,6 +14,9 @@ interface ChatDao {
     @Query("SELECT * FROM nodes ORDER BY lastSeenMilli DESC")
     fun getAllNodes(): Flow<List<Node>>
     
+    @Query("SELECT * FROM nodes WHERE isContact = 1 ORDER BY username ASC")
+    fun getContacts(): Flow<List<Node>>
+    
     @Query("SELECT * FROM nodes WHERE id = :id LIMIT 1")
     suspend fun getNodeById(id: String): Node?
 
@@ -22,6 +25,9 @@ interface ChatDao {
 
     @Update
     suspend fun updateNode(node: Node)
+    
+    @Query("DELETE FROM nodes WHERE id = :id")
+    suspend fun deleteNodeById(id: String)
     
     @Query("UPDATE nodes SET isConnected = 0")
     suspend fun disconnectAllNodes()
