@@ -37,4 +37,23 @@ class ChatRepository(
             nearbyManager.sendTextMessage(nodeId, msg)
         }
     }
+    
+    suspend fun sendFile(nodeId: String, uri: android.net.Uri, name: String, size: Long, mimeType: String) {
+        val msg = Message(
+            senderId = "me",
+            receiverId = nodeId,
+            content = "Sending File...",
+            type = com.example.data.model.MessageType.FILE,
+            fileName = name,
+            fileSize = size,
+            fileMimeType = mimeType,
+            fileUri = uri.toString(),
+            status = com.example.data.model.MessageStatus.SENDING,
+            progress = 0f
+        )
+        chatDao.insertMessage(msg)
+        if (nearbyManager.connectedEndpoints.value.contains(nodeId)) {
+            nearbyManager.sendFileMessage(nodeId, msg, uri)
+        }
+    }
 }

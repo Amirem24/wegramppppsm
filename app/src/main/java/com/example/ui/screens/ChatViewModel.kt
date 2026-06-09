@@ -8,6 +8,8 @@ import com.example.data.model.Node
 import com.example.data.repository.ChatRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,10 +26,20 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
     val connectedEndpoints: StateFlow<Set<String>> = repository.connectedEndpoints
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    private val _selectedTransport = MutableStateFlow("Auto")
+    val selectedTransport: StateFlow<String> = _selectedTransport.asStateFlow()
+
+    fun setSelectedTransport(transport: String) {
+        _selectedTransport.value = transport
+        stopNearby()
+        startNearby()
+    }
+
     // Start discovery and advertising
     fun startNearby() {
-        repository.nearbyManager.startAdvertising()
-        repository.nearbyManager.startDiscovery()
+        val transport = _selectedTransport.value
+        repository.nearbyManager.startAdvertising(transport)
+        repository.nearbyManager.startDiscovery(transport)
     }
     
     fun stopNearby() {
@@ -51,6 +63,12 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
     fun sendMessage(nodeId: String, text: String, replyToId: String? = null) {
         viewModelScope.launch {
             repository.sendMessage(nodeId, text, replyToId)
+        }
+    }
+    
+    fun sendFile(nodeId: String, uri: android.net.Uri, name: String, size: Long, mimeType: String) {
+        viewModelScope.launch {
+            repository.sendFile(nodeId, uri, name, size, mimeType)
         }
     }
     

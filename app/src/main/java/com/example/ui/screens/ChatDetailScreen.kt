@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,25 +13,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Message
 import com.example.data.model.MessageStatus
+import com.example.data.model.MessageType
 import com.example.data.model.Node
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -47,6 +57,26 @@ fun ChatDetailScreen(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            val contentResolver = context.contentResolver
+            var name = "file"
+            var size = 0L
+            contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    name = cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                    size = cursor.getLong(cursor.getColumnIndexOrThrow(OpenableColumns.SIZE))
+                }
+            }
+            val mimeType = contentResolver.getType(it) ?: "*/*"
+            viewModel.sendFile(nodeId, it, name, size, mimeType)
+            coroutineScope.launch { listState.animateScrollToItem(messages.size) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -98,7 +128,7 @@ fun ChatDetailScreen(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
             ) {
-                IconButton(onClick = { /* Attach */ }) {
+                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
                     Icon(Icons.Filled.AttachFile, contentDescription = "Attach")
                 }
                 OutlinedTextField(
@@ -189,12 +219,66 @@ fun MessageBubble(message: Message) {
             color = bgColor,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(12.dp),
-                color = textColor,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            if (message.type == MessageType.FILE) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = "File", tint = textColor)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = message.fileName ?: "Unknown_File",
+                                color = textColor,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val mbSize = message.fileSize / (1024f * 1024f)
+                            Text(
+                                text = String.format("%.2f MB", mbSize),
+                                color = textColor.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        if (!isMe && message.status != MessageStatus.FILE_RECEIVED) {
+                            IconButton(onClick = { /* Accept Payload Logic */ }) {
+                                Icon(Icons.Filled.FileDownload, contentDescription = "Download", tint = textColor)
+                            }
+                        }
+                    }
+                    if (message.status == MessageStatus.TRANSFERRING_FILE) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { message.progress },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (isMe) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("${(message.progress * 100).toInt()}%", color = textColor.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall)
+                            Text("${message.speedKbps} KB/s", color = textColor.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall)
+                        }
+                    } else if (message.status == MessageStatus.FILE_RECEIVED) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("File received successfully.", color = textColor.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            } else {
+                Text(
+                    text = message.content,
+                    modifier = Modifier.padding(12.dp),
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -208,11 +292,12 @@ fun MessageBubble(message: Message) {
             if (isMe) {
                 Spacer(modifier = Modifier.width(4.dp))
                 val icon = when (message.status) {
-                    MessageStatus.SENDING -> Icons.Outlined.AccessTime
+                    MessageStatus.SENDING, MessageStatus.TRANSFERRING_FILE -> Icons.Outlined.AccessTime
                     MessageStatus.SENT -> Icons.Outlined.CheckCircleOutline
-                    MessageStatus.DELIVERED -> Icons.Outlined.CheckCircle
+                    MessageStatus.DELIVERED, MessageStatus.FILE_RECEIVED -> Icons.Outlined.CheckCircle
                     MessageStatus.READ -> Icons.Outlined.CheckCircle // Can color differently for read
-                    MessageStatus.FAILED -> null
+                    MessageStatus.FAILED -> Icons.Outlined.ErrorOutline
+                    else -> null
                 }
                 if (icon != null) {
                     Icon(

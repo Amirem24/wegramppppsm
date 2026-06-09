@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +42,11 @@ fun DiscoveryScreen(
     onNavigateToChat: (String) -> Unit
 ) {
     val nodes by viewModel.aggregatedNodes.collectAsState()
+    val selectedTransport by viewModel.selectedTransport.collectAsState()
+    
+    // Filtering
+    var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    val filteredNodes = nodes.filter { !it.isConnected && it.name.contains(searchQuery, ignoreCase = true) }
     
     Scaffold(
         topBar = {
@@ -52,7 +58,7 @@ fun DiscoveryScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Refresh logic */ viewModel.startNearby() }) {
+                    IconButton(onClick = { viewModel.startNearby() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
                 }
@@ -66,10 +72,24 @@ fun DiscoveryScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Transport Selection
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                val options = listOf("Bluetooth", "Hotspot", "Local Wi-Fi")
+                options.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        selected = selectedTransport == label,
+                        onClick = { viewModel.setSelectedTransport(label) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+            
             // Scanning Status Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -77,16 +97,24 @@ fun DiscoveryScreen(
                         .background(Color(0xFF4CAF50), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Scanning Local Network...", color = Color(0xFF4CAF50), style = MaterialTheme.typography.labelLarge)
+                Text("Scanning via $selectedTransport...", color = Color(0xFF4CAF50), style = MaterialTheme.typography.labelLarge)
             }
             
             // Radar Visualization
             RadarVisualization()
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                placeholder = { Text("Filter users...") },
+                shape = RoundedCornerShape(12.dp)
+            )
             
             Text(
-                "Nearby Nodes",
+                "Nearby Nodes (${filteredNodes.size})",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Start)
@@ -98,7 +126,7 @@ fun DiscoveryScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(nodes.filter { !it.isConnected }) { node ->
+                items(filteredNodes) { node ->
                     NodeCardItem(
                         node = node,
                         onClick = { viewModel.connectToNode(node.id) }

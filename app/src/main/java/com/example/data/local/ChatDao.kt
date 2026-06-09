@@ -40,4 +40,7 @@ interface ChatDao {
     
     @Query("SELECT * FROM messages WHERE id = :messageId LIMIT 1")
     suspend fun getMessageById(messageId: String): Message?
+
+    @Query("SELECT * FROM messages WHERE payloadId = :payloadId LIMIT 1")
+    suspend fun getMessageByPayloadId(payloadId: Long): Message?
 }
