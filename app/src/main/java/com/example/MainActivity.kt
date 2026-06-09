@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
         
         database = AppDatabase.getDatabase(this)
         nearbyManager = NearbyManager(this, database.chatDao())
-        repository = ChatRepository(database.chatDao(), nearbyManager)
+        repository = ChatRepository(database.chatDao(), nearbyManager, this)
 
         setContent {
             Theme {

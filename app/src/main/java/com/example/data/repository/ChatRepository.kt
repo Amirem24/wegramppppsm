@@ -1,16 +1,21 @@
 package com.example.data.repository
 
+import android.content.Context
 import com.example.data.local.ChatDao
 import com.example.data.model.Message
 import com.example.data.model.Node
 import com.example.nearby.NearbyManager
+import com.example.nearby.WebGatewayManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class ChatRepository(
-    private val chatDao: ChatDao,
-    val nearbyManager: NearbyManager
+    val chatDao: ChatDao,
+    val nearbyManager: NearbyManager,
+    val context: Context
 ) {
+
+    val webGatewayManager = WebGatewayManager(context, chatDao)
 
     val allNodes: Flow<List<Node>> = chatDao.getAllNodes()
     val discoveredNodes: Flow<List<Node>> = nearbyManager.discoveredEndpoints

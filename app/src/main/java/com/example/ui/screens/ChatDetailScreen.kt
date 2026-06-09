@@ -61,6 +61,9 @@ fun ChatDetailScreen(
     val nodes by viewModel.aggregatedNodes.collectAsState()
     val node = nodes.find { it.id == nodeId } ?: Node(nodeId, "Unknown", "Unknown", 0L, false)
 
+    val typingState by viewModel.webGatewayTypingState.collectAsState()
+    val isPeerTyping = typingState[nodeId] == true
+ 
     var inputText by remember { mutableStateOf("") }
     var replyingToMessage by remember { mutableStateOf<Message?>(null) }
     
@@ -115,9 +118,11 @@ fun ChatDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    if (node.isConnected) "Online (${node.transportType})" else "Offline (Last Seen: " + formatLastSeen(node.lastSeenMilli) + ")",
+                                    if (isPeerTyping) "Online (Web Gateway) • typing..."
+                                    else if (node.isConnected) "Online (${node.transportType})"
+                                    else "Offline (Last Seen: " + formatLastSeen(node.lastSeenMilli) + ")",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isPeerTyping) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }

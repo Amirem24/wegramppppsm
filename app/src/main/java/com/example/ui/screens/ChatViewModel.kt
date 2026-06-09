@@ -89,6 +89,24 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
         repository.nearbyManager.resumeFileTransfer(messageId, endpointId)
     }
 
+    // Web Access Gateway actions and state flows
+    val isWebGatewayRunning: StateFlow<Boolean> = repository.webGatewayManager.isServerRunning
+    val webGatewayUrl: StateFlow<String> = repository.webGatewayManager.serverUrl
+    val webGatewayClientsCount: StateFlow<Int> = repository.webGatewayManager.clientsCount
+    val webGatewayTypingState: StateFlow<Map<String, Boolean>> = repository.webGatewayManager.typingState
+
+    fun startWebGateway(): String {
+        return repository.webGatewayManager.startServer()
+    }
+
+    fun stopWebGateway() {
+        repository.webGatewayManager.stopServer()
+    }
+
+    fun setWebGatewayTTL(minutes: Int) {
+        repository.webGatewayManager.setTTL(minutes)
+    }
+
     // Profile updates
     fun getMyProfile(): Pair<String, String> {
         return Pair(repository.nearbyManager.myUsername, repository.nearbyManager.myAvatar)
