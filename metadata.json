@@ -1,0 +1,6 @@
+{
+  "name": "gochat",
+  "description": "An offline, local-network P2P messaging app like Briar, supporting nearby discovery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
